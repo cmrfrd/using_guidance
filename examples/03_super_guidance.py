@@ -3,7 +3,7 @@ import re
 from enum import Enum
 from itertools import accumulate
 from operator import itemgetter
-from typing import Generator, Iterable
+from typing import Generator, Iterable, Optional
 
 from guidance import Program, llms
 from pydantic import BaseModel
@@ -23,18 +23,40 @@ def empty_get(d: dict, key: str) -> str:
     return d.get(key, "")
 
 
-def parse_int(options):
-    """Parse the best integer from a list of options."""
+def parse_int(options: list[str]) -> int:
+    """Parse the best integer from a list of options.
+
+    Args:
+        options: A list of options to parse from.
+
+    Returns:
+        The best integer from the list of options.
+    """
     for option in options:
         try:
-            # remove any non numeric characters
             return int(re.sub("[^0-9]", "", option))
         except ValueError:
             pass
     return 0
 
 
-def jsonformer2guidance(schema, key=None, indent=0, refs=None):
+def jsonformer2guidance(
+    schema: dict, key: str = "", indent: int = 0, refs: Optional[dict] = None
+) -> str:
+    """Convert a json schema to a guidance program.
+
+    Args:
+        schema: The json schema to convert.
+        key: The key of the current section of the schema.
+        indent: The current indentation level.
+        refs: The references to use for the schema.
+
+    Returns:
+        The guidance program for the json schema.
+
+    Raises:
+        ValueError: If the schema type is not supported.
+    """
     if refs is None and schema.get("definitions"):
         refs = schema["definitions"]
 
@@ -44,7 +66,7 @@ def jsonformer2guidance(schema, key=None, indent=0, refs=None):
         num_items = len(schema["properties"])
         for i, (k, v) in enumerate(schema["properties"].items()):
             if v.get("$ref"):
-                v = refs[v["$ref"].split("/")[-1]]
+                v = refs[v["$ref"].split("/")[-1]]  # type: ignore
                 v["type"] = "string"
             out += (
                 "  " * (indent + 1)
@@ -68,7 +90,7 @@ def jsonformer2guidance(schema, key=None, indent=0, refs=None):
             + "' stop=']'"
             + extra_args
             + "}}{{#unless @first}}, {{/unless}}"
-            + jsonformer2guidance(schema["items"], "this", refs)
+            + jsonformer2guidance(schema["items"], "this", indent, refs)
             + "{{/geneach}}]"
         )
     elif schema["type"] == "string":
@@ -85,6 +107,8 @@ def jsonformer2guidance(schema, key=None, indent=0, refs=None):
         return "{{#select '" + key + "'}}True{{or}}False{{/select}}"
     elif schema["type"] == "integer":
         return "{{parse_int (gen '" + key + "' max_tokens=1 n=5)}}"
+    else:
+        raise ValueError(f"Unknown type {schema['type']}")
 
 
 class StrengthEnum(Enum):
@@ -106,10 +130,10 @@ def generate_item(general_description: str) -> InGameItem:
     Generates a story for a given name.
 
     Args:
-        name: The name of the person in the story.
+        general_description: The general description of the item.
 
-    Yields:
-        A stream of story content from the llm.
+    Returns:
+        A generated item.
     """
 
     json_schema = InGameItem.schema()
