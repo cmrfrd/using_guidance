@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
-source $(cd /opt/using_guidance/ && pdm env info -p)/bin/activate
+set -e
+source /opt/using_guidance/.venv/bin/activate
 exec "$@"

@@ -1,9 +1,6 @@
-import random
 import re
 from enum import Enum
-from itertools import accumulate
-from operator import itemgetter
-from typing import Generator, Iterable, Optional
+from typing import Optional
 
 from guidance import Program, llms
 from pydantic import BaseModel
@@ -11,14 +8,16 @@ from pydantic import BaseModel
 
 def empty_get(d: dict, key: str) -> str:
     """
-    Returns the value of a key in a dictionary, or an empty string if the key is not present.
+    Returns the value of a key in a dictionary, or an empty string if
+    the key is not present.
 
     Args:
         d: The dictionary to get the value from.
         key: The key to get the value for.
 
     Returns:
-        The value of the key in the dictionary, or an empty string if the key is not present.
+        The value of the key in the dictionary, or an empty string if
+        the key is not present.
     """
     return d.get(key, "")
 
@@ -134,6 +133,9 @@ def generate_item(general_description: str) -> InGameItem:
 
     Returns:
         A generated item.
+
+    Raises:
+        ValueError: If the json output could not be found.
     """
 
     json_schema = InGameItem.schema()
@@ -159,7 +161,6 @@ def generate_item(general_description: str) -> InGameItem:
     ``` 
     """
 
-    # define a guidance program that adapts a proverb
     program_result: Program = Program(
         base_template, llm=llms.OpenAI("text-davinci-003"), caching=False, silent=True
     )(parse_int=parse_int)
@@ -171,4 +172,4 @@ def generate_item(general_description: str) -> InGameItem:
 
 
 item = generate_item("Harry Potter's wand")
-print(item)
+print(item.json(indent=2))
