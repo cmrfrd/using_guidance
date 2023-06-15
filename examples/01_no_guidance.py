@@ -45,6 +45,7 @@ def igenerate(prompt: str) -> Generator[str, None, None]:
     )
 
     # map response to ChatCompletion objects
+    completion: ChatCompletion
     for completion in map(ChatCompletion.parse_obj, response):
         delta = completion.choices[0].delta
 
